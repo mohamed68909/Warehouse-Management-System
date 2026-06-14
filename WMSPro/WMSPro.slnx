@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WMSPro.Api/WMSPro.Api.csproj" />
+    <Project Path="src/WMSPro.Application/WMSPro.Application.csproj" />
+    <Project Path="src/WMSPro.Domain/WMSPro.Domain.csproj" />
+    <Project Path="src/WMSPro.Infrastructure/WMSPro.Infrastructure.csproj" />
+    <Project Path="src/WMSPro.Mvc/WMSPro.Mvc.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WMSPro.UnitTests/WMSPro.UnitTests.csproj" />
+    <Project Path="tests/WMSPro.IntegrationTests/WMSPro.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,238 @@
+@model WMSPro.Mvc.Controllers.DashboardStatsViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
+    <a href="/Dashboard/Export" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+        <i class="fas fa-download fa-sm text-white-50"></i> Generate Report
+    </a>
+</div>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- KPI Cards Row -->
+<div class="row">
+    <!-- Total Products Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Products</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model?.TotalProducts</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-boxes fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Stock Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Stock (Units)</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model?.TotalStock</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-cubes fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Low Stock Alerts Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Low Stock Alerts</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model?.LowStockAlertsCount</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Warehouses Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Active Warehouses</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model?.TotalWarehouses</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-warehouse fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Area Chart -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Stock Movement Overview (Last 6 Months)</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-area" style="height: 320px;">
+                    <canvas id="myAreaChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Activities</h6>
+            </div>
+            <div class="card-body" style="height: 360px; overflow-y: auto;">
+                @if (Model?.RecentActivities != null && Model.RecentActivities.Any())
+                {
+                    <div class="timeline">
+                        @foreach (var activity in Model.RecentActivities)
+                        {
+                            var badgeClass = activity.Action switch
+                            {
+                                "Stock IN" => "bg-success",
+                                "Stock OUT" => "bg-danger",
+                                "Transfer" => "bg-info",
+                                _ => "bg-secondary"
+                            };
+
+                            var icon = activity.Action switch
+                            {
+                                "Stock IN" => "fa-arrow-down",
+                                "Stock OUT" => "fa-arrow-up",
+                                "Transfer" => "fa-exchange-alt",
+                                _ => "fa-circle"
+                            };
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between">
+                                    <strong><i class="fas @icon text-gray-500 mr-2"></i> @activity.ProductName</strong>
+                                    <small class="text-muted">@activity.Time.ToString("MMM dd, HH:mm")</small>
+                                </div>
+                                <div class="mt-1">
+                                    <span class="badge @badgeClass">@activity.Action</span> 
+                                    <span>@activity.Quantity units</span>
+                                    <br>
+                                    <small class="text-muted"><i class="fas fa-map-marker-alt"></i> @activity.Warehouse</small>
+                                </div>
+                                <hr class="mt-2 mb-0">
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted text-center mt-5">No recent activities.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Chart.js Setup
+            var ctx = document.getElementById("myAreaChart");
+            if(ctx) {
+                // Get data from Model safely
+                var labels = @Html.Raw(Json.Serialize(Model?.StockMovementTrend?.Select(t => t.Month) ?? Array.Empty<string>()));
+                var stockIn = @Html.Raw(Json.Serialize(Model?.StockMovementTrend?.Select(t => t.StockIn) ?? Array.Empty<int>()));
+                var stockOut = @Html.Raw(Json.Serialize(Model?.StockMovementTrend?.Select(t => t.StockOut) ?? Array.Empty<int>()));
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: "Stock IN",
+                                lineTension: 0.3,
+                                backgroundColor: "rgba(28, 200, 138, 0.05)",
+                                borderColor: "rgba(28, 200, 138, 1)",
+                                pointRadius: 3,
+                                pointBackgroundColor: "rgba(28, 200, 138, 1)",
+                                pointBorderColor: "rgba(28, 200, 138, 1)",
+                                pointHoverRadius: 3,
+                                pointHoverBackgroundColor: "rgba(28, 200, 138, 1)",
+                                pointHoverBorderColor: "rgba(28, 200, 138, 1)",
+                                pointHitRadius: 10,
+                                pointBorderWidth: 2,
+                                data: stockIn,
+                            },
+                            {
+                                label: "Stock OUT",
+                                lineTension: 0.3,
+                                backgroundColor: "rgba(231, 74, 59, 0.05)",
+                                borderColor: "rgba(231, 74, 59, 1)",
+                                pointRadius: 3,
+                                pointBackgroundColor: "rgba(231, 74, 59, 1)",
+                                pointBorderColor: "rgba(231, 74, 59, 1)",
+                                pointHoverRadius: 3,
+                                pointHoverBackgroundColor: "rgba(231, 74, 59, 1)",
+                                pointHoverBorderColor: "rgba(231, 74, 59, 1)",
+                                pointHitRadius: 10,
+                                pointBorderWidth: 2,
+                                data: stockOut,
+                            }
+                        ],
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        layout: {
+                            padding: { left: 10, right: 25, top: 25, bottom: 0 }
+                        },
+                        scales: {
+                            x: { grid: { display: false, drawBorder: false } },
+                            y: { grid: { color: "rgb(234, 236, 244)", zeroLineColor: "rgb(234, 236, 244)", drawBorder: false, borderDash: [2], zeroLineBorderDash: [2] } }
+                        },
+                        plugins: {
+                            legend: { display: true },
+                            tooltip: {
+                                backgroundColor: "rgb(255,255,255)",
+                                bodyColor: "#858796",
+                                titleColor: '#6e707e',
+                                borderColor: '#dddfeb',
+                                borderWidth: 1,
+                                padding: 15,
+                                displayColors: false,
+                                intersect: false,
+                                mode: 'index',
+                                caretPadding: 10
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+}

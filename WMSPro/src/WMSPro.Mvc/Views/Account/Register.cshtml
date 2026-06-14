@@ -1,0 +1,217 @@
+@model WMSPro.Mvc.Models.Account.RegisterViewModel
+@{
+    ViewData["Title"] = "Create Account - WMS Pro";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #eef2ff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+            padding: 2.5rem 2rem;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .logo-wrap {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .logo-icon {
+            background: #2563eb;
+            border-radius: 12px;
+            width: 52px; height: 52px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .logo-icon svg { width: 28px; height: 28px; fill: #fff; }
+        .logo-wrap h1 { font-size: 1.3rem; font-weight: 700; color: #111827; }
+        .logo-wrap p  { font-size: 0.85rem; color: #6b7280; }
+
+        .form-group { margin-bottom: 1rem; }
+
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.4rem;
+        }
+
+        .input-wrap { position: relative; }
+
+        .input-icon {
+            position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+            color: #9ca3af; font-style: normal;
+        }
+
+        .form-control, .form-select {
+            width: 100%;
+            padding: 0.6rem 0.85rem 0.6rem 2.4rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #111827;
+            outline: none;
+            transition: border-color .2s;
+            background: #fff;
+        }
+
+        .form-select { padding-left: 0.85rem; }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+        }
+
+        .terms-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 1.25rem;
+            font-size: 0.85rem;
+            color: #374151;
+        }
+
+        .terms-row a { color: #2563eb; font-weight: 500; text-decoration: none; }
+        .terms-row a:hover { text-decoration: underline; }
+
+        .btn-primary {
+            width: 100%;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.7rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .2s;
+        }
+
+        .btn-primary:hover { background: #1d4ed8; }
+
+        .sign-in {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .sign-in a { color: #2563eb; font-weight: 600; text-decoration: none; }
+        .sign-in a:hover { text-decoration: underline; }
+
+        .alert-danger {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            border-radius: 8px;
+            padding: 0.65rem 0.85rem;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo-wrap">
+        <div class="logo-icon">
+            <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zm0 12H4V9h16v10zM12 3l-8 4h16l-8-4z"/></svg>
+        </div>
+        <h1>Create Account</h1>
+        <p>Join WMS Pro Warehouse Management</p>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert-danger">
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <div>@error.ErrorMessage</div>
+            }
+        </div>
+    }
+
+    <form asp-action="Register" asp-controller="Account" method="post">
+        @Html.AntiForgeryToken()
+
+        <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <div class="input-wrap">
+                <i class="input-icon">👤</i>
+                <input asp-for="FullName" type="text" class="form-control" placeholder="John Doe" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <div class="input-wrap">
+                <i class="input-icon">✉</i>
+                <input asp-for="Email" type="email" class="form-control" placeholder="john@example.com" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Role</label>
+            <select asp-for="Role" class="form-select">
+                <option value="WarehouseEmployee">Warehouse Employee</option>
+                <option value="Manager">Manager</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="input-wrap">
+                <i class="input-icon">🔒</i>
+                <input asp-for="Password" type="password" class="form-control" placeholder="••••••••" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            <div class="input-wrap">
+                <i class="input-icon">🔒</i>
+                <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="••••••••" />
+            </div>
+        </div>
+
+        <div class="terms-row">
+            <input asp-for="AgreeToTerms" type="checkbox" id="terms" />
+            <label for="terms">
+                I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
+            </label>
+        </div>
+
+        <button type="submit" class="btn-primary">Create Account</button>
+    </form>
+
+    <div class="sign-in">
+        Already have an account? <a asp-action="Login" asp-controller="Account">Sign In</a>
+    </div>
+</div>
+</body>
+</html>

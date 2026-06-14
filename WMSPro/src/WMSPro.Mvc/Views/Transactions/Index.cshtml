@@ -1,0 +1,246 @@
+@model WMSPro.Mvc.Controllers.TransactionsViewModel
+@{
+    ViewData["Title"] = "Transactions";
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Inventory Transactions</h1>
+    <div>
+        <a href="/Transactions/Export?search=@Model.SearchQuery&type=@Model.FilterType" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm mr-2">
+            <i class="fas fa-download fa-sm text-white-50"></i> Export
+        </a>
+        <button class="btn btn-sm btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addTransactionModal">
+            <i class="fas fa-plus fa-sm text-white-50"></i> New Transaction
+        </button>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- Summary Cards Row -->
+<div class="row">
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Stock IN</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalStockIn units</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-arrow-down fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total Stock OUT</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalStockOut units</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-arrow-up fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Transfers</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalTransfers units</div>
+                    </div>
+                    <div class="col-auto"><i class="fas fa-exchange-alt fa-2x text-gray-300"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">Transaction History</h6>
+        <form class="form-inline" method="get" action="/Transactions">
+            <div class="input-group mr-2">
+                <select name="type" class="form-control form-select bg-light border-0 small">
+                    <option value="">All Types</option>
+                    <option value="In" selected="@(Model.FilterType == "In")">Stock IN</option>
+                    <option value="Out" selected="@(Model.FilterType == "Out")">Stock OUT</option>
+                    <option value="Transfer" selected="@(Model.FilterType == "Transfer")">Transfer</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <input type="text" name="search" value="@Model.SearchQuery" class="form-control bg-light border-0 small" placeholder="Search product...">
+                <div class="input-group-append">
+                    <button class="btn btn-primary" type="submit"><i class="fas fa-search fa-sm"></i></button>
+                    @if(!string.IsNullOrEmpty(Model.SearchQuery) || !string.IsNullOrEmpty(Model.FilterType))
+                    {
+                        <a href="/Transactions" class="btn btn-secondary"><i class="fas fa-times"></i></a>
+                    }
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Type</th>
+                        <th>Product</th>
+                        <th>SKU</th>
+                        <th>Qty</th>
+                        <th>Source -> Destination</th>
+                        <th>Reference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Transactions)
+                    {
+                        <tr>
+                            <td>@item.Date.ToLocalTime().ToString("MMM dd, yyyy HH:mm")</td>
+                            <td>
+                                @if(item.Type == "In") { <span class="badge bg-success">IN</span> }
+                                else if(item.Type == "Out") { <span class="badge bg-danger">OUT</span> }
+                                else { <span class="badge bg-info text-dark">TRANSFER</span> }
+                            </td>
+                            <td><strong>@item.ProductName</strong></td>
+                            <td>@item.SKU</td>
+                            <td>@item.Quantity</td>
+                            <td>
+                                @if(item.Type == "In") { <span class="text-success"><i class="fas fa-arrow-right"></i> @item.DestinationWarehouseName</span> }
+                                else if(item.Type == "Out") { <span class="text-danger">@item.SourceWarehouseName <i class="fas fa-arrow-right"></i></span> }
+                                else { <span>@item.SourceWarehouseName <i class="fas fa-arrow-right"></i> @item.DestinationWarehouseName</span> }
+                            </td>
+                            <td>@item.Reference</td>
+                        </tr>
+                    }
+                    @if (!Model.Transactions.Any())
+                    {
+                        <tr><td colspan="7" class="text-center text-muted">No transactions found.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Transaction Modal -->
+<div class="modal fade" id="addTransactionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="/Transactions/Create">
+                <div class="modal-header">
+                    <h5 class="modal-title">New Transaction</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Transaction Type</label>
+                        <select class="form-select form-control" name="Type" id="txType" onchange="toggleWarehouses()" required>
+                            <option value="In">Stock IN (Receive)</option>
+                            <option value="Out">Stock OUT (Dispatch)</option>
+                            <option value="Transfer">Transfer (Between Warehouses)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Product</label>
+                        <select class="form-select form-control" name="ProductId" required>
+                            <option value="">-- Select Product --</option>
+                            @foreach(var p in Model.Products)
+                            {
+                                <option value="@p.Id">@p.Name (SKU: @p.SKU)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3" id="sourceWhGroup" style="display: none;">
+                            <label class="form-label">Source Warehouse</label>
+                            <select class="form-select form-control" name="SourceWarehouseId" id="sourceWh">
+                                <option value="">-- Select Source --</option>
+                                @foreach(var w in Model.Warehouses)
+                                {
+                                    <option value="@w.Id">@w.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3" id="destWhGroup">
+                            <label class="form-label">Destination Warehouse</label>
+                            <select class="form-select form-control" name="DestinationWarehouseId" id="destWh">
+                                <option value="">-- Select Destination --</option>
+                                @foreach(var w in Model.Warehouses)
+                                {
+                                    <option value="@w.Id">@w.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Quantity</label>
+                            <input type="number" class="form-control" name="Quantity" min="1" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Reference Number</label>
+                            <input type="text" class="form-control" name="Reference" placeholder="e.g. PO-123" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Process Transaction</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleWarehouses() {
+            var type = document.getElementById('txType').value;
+            var src = document.getElementById('sourceWhGroup');
+            var dst = document.getElementById('destWhGroup');
+            var srcInput = document.getElementById('sourceWh');
+            var dstInput = document.getElementById('destWh');
+
+            if (type === 'In') {
+                src.style.display = 'none';
+                dst.style.display = 'block';
+                srcInput.removeAttribute('required');
+                dstInput.setAttribute('required', 'required');
+            } else if (type === 'Out') {
+                src.style.display = 'block';
+                dst.style.display = 'none';
+                srcInput.setAttribute('required', 'required');
+                dstInput.removeAttribute('required');
+            } else if (type === 'Transfer') {
+                src.style.display = 'block';
+                dst.style.display = 'block';
+                srcInput.setAttribute('required', 'required');
+                dstInput.setAttribute('required', 'required');
+            }
+        }
+        
+        // run on load
+        toggleWarehouses();
+    </script>
+}
