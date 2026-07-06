@@ -1,0 +1,80 @@
+## .NET / ASP.NET Core Enhanced .gitignore
+## Mohamed Ashraf - Security Enhanced
+
+## .NET artifacts
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio
+.vs/
+*.vsp
+*.vspx
+
+## VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+## JetBrains Rider
+.idea/
+*.sln.iml
+
+## CRITICAL - Secrets and Sensitive Configuration
+## These must NEVER be committed to version control
+appsettings.Development.json
+appsettings.local.json
+appsettings.*.local.json
+secrets.json
+*.pfx
+*.p12
+*.snk
+
+## Database files
+*.mdf
+*.ldf
+*.ndf
+
+## Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+TestResult.xml
+
+## NuGet
+*.nupkg
+*.snupkg
+.nuget/packages/
+nuget.exe
+
+## Publish
+publish/
+**/Properties/PublishProfiles/
+
+## Logs
+logs/
+*.log
+npm-debug.log*
+
+## OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## Docker
+docker-compose.override.yml
