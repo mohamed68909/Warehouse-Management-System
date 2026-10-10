@@ -66,6 +66,8 @@ public static class DependencyInjection
         // Register Services
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IPdfReportService, PdfReportService>();
+        services.AddScoped<WMSPro.Application.Picking.Services.IPickPathOptimizer, WMSPro.Application.Picking.Services.PickPathOptimizer>();
 
         // Register Repositories
         services.AddScoped<IWarehouseRepository, WarehouseRepository>();
@@ -73,6 +75,8 @@ public static class DependencyInjection
         services.AddScoped<IWarehouseStockRepository, WarehouseStockRepository>();
         services.AddScoped<IInventoryTransactionRepository, InventoryTransactionRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IStorageLocationRepository, StorageLocationRepository>();
+        services.AddScoped<IPickingWaveRepository, PickingWaveRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;

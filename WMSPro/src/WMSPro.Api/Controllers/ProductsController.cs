@@ -27,6 +27,13 @@ public class ProductsController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : NotFound(new { error = result.Error.Message });
     }
 
+    [HttpGet("by-sku/{sku}")]
+    public async Task<IActionResult> GetBySku(string sku, CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetProductBySkuQuery(sku), cancellationToken);
+        return result.IsSuccess ? Ok(result.Value) : NotFound(new { error = result.Error.Message });
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateProductCommand command, CancellationToken cancellationToken)
     {

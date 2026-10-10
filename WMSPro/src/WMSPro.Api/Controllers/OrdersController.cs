@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WMSPro.Application.Abstractions;
 using WMSPro.Application.Orders.Commands;
 
 namespace WMSPro.Api.Controllers;
@@ -25,6 +26,20 @@ public class OrdersController : ControllerBase
     {
         var result = await _mediator.Send(new GetOrderByIdQuery(id), cancellationToken);
         return result.IsSuccess ? Ok(result.Value) : NotFound(new { error = result.Error.Message });
+    }
+
+    [HttpGet("{id:guid}/invoice-pdf")]
+    public async Task<IActionResult> DownloadInvoicePdf(
+        Guid id, 
+        [FromServices] IPdfReportService pdfService, 
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetOrderByIdQuery(id), cancellationToken);
+        if (!result.IsSuccess)
+            return NotFound(new { error = result.Error.Message });
+
+        var pdfBytes = pdfService.GenerateOrderInvoicePdf(result.Value);
+        return File(pdfBytes, "application/pdf", $"Invoice_{result.Value.OrderNumber}.pdf");
     }
 
     [HttpPost]

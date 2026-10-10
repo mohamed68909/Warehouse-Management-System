@@ -1,0 +1,459 @@
+@model WMSPro.Mvc.Controllers.ScannerViewModel
+@{
+    ViewData["Title"] = "Barcode & QR Scanner Hub";
+}
+
+<style>
+    .scanner-viewport {
+        border-radius: 1rem;
+        overflow: hidden;
+        background: #111827;
+        position: relative;
+        min-height: 280px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .scanner-laser {
+        position: absolute;
+        top: 50%;
+        left: 10%;
+        right: 10%;
+        height: 2px;
+        background: #ef4444;
+        box-shadow: 0 0 12px #ef4444, 0 0 20px #ef4444;
+        animation: scanSweep 2s ease-in-out infinite alternate;
+        z-index: 10;
+        pointer-events: none;
+    }
+    @@keyframes scanSweep {
+        0% { transform: translateY(-70px); opacity: 0.8; }
+        100% { transform: translateY(70px); opacity: 0.8; }
+    }
+    .card-glass {
+        background: #ffffff;
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+    .barcode-input:focus {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
+    }
+</style>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h1 class="h3 mb-1 text-gray-800 fw-bold">
+            <i class="fas fa-barcode text-primary me-2"></i>Barcode & QR Scanner Terminal
+        </h1>
+        <p class="text-muted small mb-0">
+            High-speed optical scanning via phone camera, webcam, or USB/Bluetooth hardware barcode guns.
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/Products/Index" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2">
+            <i class="fas fa-arrow-left me-1"></i> Back to Products
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- LEFT: SCANNER VIEWFINDER & HARDWARE INPUT -->
+    <div class="col-lg-5">
+        <div class="card card-glass p-3 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="m-0 fw-bold text-dark">
+                    <i class="fas fa-camera text-primary me-2"></i>Camera Viewfinder
+                </h6>
+                <span class="badge bg-success-subtle text-success px-2 py-1 rounded-pill" id="cameraStatusBadge">
+                    Camera Ready
+                </span>
+            </div>
+
+            <!-- Viewfinder Area -->
+            <div class="scanner-viewport shadow-inner mb-3" id="viewportContainer">
+                <div id="interactiveScanner" style="width: 100%;"></div>
+                <div class="scanner-laser" id="scannerLaser" style="display: none;"></div>
+                <div id="cameraPlaceholder" class="text-center text-white-50 p-4">
+                    <i class="fas fa-qrcode fa-3x mb-2 text-white-50"></i>
+                    <p class="small mb-2">Camera is currently paused.</p>
+                    <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="startCamera()">
+                        <i class="fas fa-play me-1"></i> Start Camera Scan
+                    </button>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mb-3">
+                <button class="btn btn-sm btn-danger rounded-pill flex-fill" id="btnStopCamera" onclick="stopCamera()" style="display: none;">
+                    <i class="fas fa-stop me-1"></i> Stop Camera
+                </button>
+            </div>
+
+            <hr class="my-3">
+
+            <!-- Physical Barcode Gun Input (Always Active) -->
+            <div>
+                <label class="form-label text-xs fw-bold text-uppercase text-muted">
+                    <i class="fas fa-barcode me-1 text-primary"></i>Handheld Barcode Reader / Manual Input
+                </label>
+                <div class="input-group">
+                    <input type="text" id="manualBarcodeInput" class="form-control barcode-input rounded-start-pill font-monospace" 
+                           placeholder="Scan barcode or type SKU..." autofocus>
+                    <button class="btn btn-primary rounded-end-pill px-3" onclick="processManualInput()">
+                        <i class="fas fa-magnifying-glass"></i>
+                    </button>
+                </div>
+                <small class="text-muted text-xs d-block mt-1">
+                    <i class="fas fa-info-circle me-1"></i>Hardware barcode scanners will auto-submit when scanned.
+                </small>
+            </div>
+
+            <!-- Quick Seeded SKUs for Instant Testing -->
+            <div class="mt-3 pt-3 border-top">
+                <span class="text-xs text-muted fw-bold d-block mb-2">Instant Demo Barcodes:</span>
+                <div class="d-flex flex-wrap gap-1">
+                    <button class="btn btn-xs btn-outline-secondary rounded-pill py-1 px-2 font-monospace text-xs" onclick="lookupSku('LAP-DELL-XPS')">LAP-DELL-XPS</button>
+                    <button class="btn btn-xs btn-outline-secondary rounded-pill py-1 px-2 font-monospace text-xs" onclick="lookupSku('LAP-MAC-M3')">LAP-MAC-M3</button>
+                    <button class="btn btn-xs btn-outline-secondary rounded-pill py-1 px-2 font-monospace text-xs" onclick="lookupSku('ACC-LOG-MX')">ACC-LOG-MX</button>
+                    <button class="btn btn-xs btn-outline-secondary rounded-pill py-1 px-2 font-monospace text-xs" onclick="lookupSku('FUR-CHAIR-01')">FUR-CHAIR-01</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: PRODUCT CARD & RAPID WAREHOUSE ACTIONS -->
+    <div class="col-lg-7">
+        <!-- Standby Placeholder Card -->
+        <div id="standbyCard" class="card card-glass text-center p-5">
+            <div class="my-5">
+                <div class="avatar-lg mx-auto mb-3 text-primary">
+                    <i class="fas fa-barcode fa-4x text-primary opacity-50"></i>
+                </div>
+                <h5 class="fw-bold text-gray-800">Scanner Ready & Listening</h5>
+                <p class="text-muted small mx-auto" style="max-width: 380px;">
+                    Scan any product barcode with your camera or barcode gun to view instant stock diagnostics and perform rapid receiving or dispatching.
+                </p>
+            </div>
+        </div>
+
+        <!-- Scanned Product Intelligence Card -->
+        <div id="productResultCard" class="card card-glass p-4" style="display: none;">
+            <div class="d-flex justify-content-between align-items-start border-bottom pb-3 mb-3">
+                <div>
+                    <span class="badge bg-primary-subtle text-primary mb-1" id="resCategory">Category</span>
+                    <h4 class="fw-bold text-dark mb-1" id="resProductName">Product Name</h4>
+                    <span class="badge bg-light text-dark border font-monospace px-2 py-1" id="resSku">SKU: ---</span>
+                </div>
+                <div class="text-end">
+                    <div class="h4 fw-bold text-success mb-0" id="resPrice">$0.00</div>
+                    <span class="badge" id="resStatusBadge">In Stock</span>
+                </div>
+            </div>
+
+            <!-- Warehouse Stock Distribution Breakdown -->
+            <div class="mb-4">
+                <h6 class="text-xs fw-bold text-uppercase text-muted mb-2">
+                    <i class="fas fa-warehouse me-1 text-info"></i>Current Stock Across Facilities
+                </h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                        <thead class="table-light text-xs text-muted">
+                            <tr>
+                                <th>Warehouse</th>
+                                <th class="text-end">Available Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resStockTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- RAPID ACTIONS ACCORDION / TABS -->
+            <div class="border rounded-3 p-3 bg-light">
+                <h6 class="fw-bold text-dark mb-3">
+                    <i class="fas fa-bolt text-warning me-1"></i>Execute Rapid Stock Action
+                </h6>
+
+                <ul class="nav nav-pills nav-fill mb-3" id="actionTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active py-2 rounded-pill fw-bold text-xs" id="in-tab" data-bs-toggle="tab" data-bs-target="#in-tab-pane" type="button">
+                            <i class="fas fa-arrow-down text-success me-1"></i> Rapid Stock IN (Receive)
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link py-2 rounded-pill fw-bold text-xs" id="out-tab" data-bs-toggle="tab" data-bs-target="#out-tab-pane" type="button">
+                            <i class="fas fa-arrow-up text-danger me-1"></i> Rapid Stock OUT (Dispatch)
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="actionTabsContent">
+                    <!-- Tab 1: Stock IN -->
+                    <div class="tab-pane fade show active" id="in-tab-pane">
+                        <div class="row g-2">
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label text-xs fw-semibold">Destination Facility</label>
+                                <select id="inWarehouseSelect" class="form-select form-select-sm rounded-3">
+                                    @foreach (var wh in Model.Warehouses)
+                                    {
+                                        <option value="@wh.Id">@wh.Name (@wh.Location)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label text-xs fw-semibold">Quantity to Receive</label>
+                                <input type="number" id="inQuantity" class="form-control form-control-sm rounded-3" value="10" min="1">
+                            </div>
+                            <div class="col-12 mb-2">
+                                <label class="form-label text-xs fw-semibold">Reference Note (Optional)</label>
+                                <input type="text" id="inReference" class="form-control form-control-sm rounded-3" placeholder="e.g. PO-RECEIPT-SCAN">
+                            </div>
+                            <div class="col-12 mt-2">
+                                <button class="btn btn-sm btn-success w-100 rounded-pill py-2 fw-bold" onclick="executeQuickAction('In')">
+                                    <i class="fas fa-check me-1"></i> Confirm Stock IN
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Stock OUT -->
+                    <div class="tab-pane fade" id="out-tab-pane">
+                        <div class="row g-2">
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label text-xs fw-semibold">Source Facility</label>
+                                <select id="outWarehouseSelect" class="form-select form-select-sm rounded-3">
+                                    @foreach (var wh in Model.Warehouses)
+                                    {
+                                        <option value="@wh.Id">@wh.Name (@wh.Location)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label text-xs fw-semibold">Quantity to Dispatch</label>
+                                <input type="number" id="outQuantity" class="form-control form-control-sm rounded-3" value="5" min="1">
+                            </div>
+                            <div class="col-12 mb-2">
+                                <label class="form-label text-xs fw-semibold">Reference Note (Optional)</label>
+                                <input type="text" id="outReference" class="form-control form-control-sm rounded-3" placeholder="e.g. SO-DISPATCH-SCAN">
+                            </div>
+                            <div class="col-12 mt-2">
+                                <button class="btn btn-sm btn-danger w-100 rounded-pill py-2 fw-bold" onclick="executeQuickAction('Out')">
+                                    <i class="fas fa-arrow-up me-1"></i> Confirm Stock OUT
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- html5-qrcode CDN for live video scanning -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <script>
+        var html5QrCode = null;
+        var currentProduct = null;
+
+        // --- Web Audio POS Beep Synthesizer ---
+        function playBeep(success = true) {
+            try {
+                var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                var osc = audioCtx.createOscillator();
+                var gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (success) {
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.15);
+                } else {
+                    osc.type = "sawtooth";
+                    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.25);
+                }
+            } catch (e) {
+                console.log("Audio not supported or blocked by user gesture:", e);
+            }
+        }
+
+        // --- Camera Scanner Management ---
+        function startCamera() {
+            document.getElementById('cameraPlaceholder').style.display = 'none';
+            document.getElementById('scannerLaser').style.display = 'block';
+            document.getElementById('btnStopCamera').style.display = 'block';
+
+            html5QrCode = new Html5Qrcode("interactiveScanner");
+            var config = { fps: 15, qrbox: { width: 250, height: 250 } };
+
+            html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                (decodedText) => {
+                    // Try parsing JSON if QR was generated with JSON payload
+                    var skuToLookup = decodedText;
+                    try {
+                        var parsed = JSON.parse(decodedText);
+                        if (parsed.sku) skuToLookup = parsed.sku;
+                    } catch(e) {}
+
+                    lookupSku(skuToLookup);
+                },
+                (errorMessage) => {
+                    // Ignore transient frame errors
+                }
+            ).catch(err => {
+                alert("Failed to access camera: " + err);
+                stopCamera();
+            });
+        }
+
+        function stopCamera() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    html5QrCode = null;
+                }).catch(e => console.error(e));
+            }
+            document.getElementById('cameraPlaceholder').style.display = 'block';
+            document.getElementById('scannerLaser').style.display = 'none';
+            document.getElementById('btnStopCamera').style.display = 'none';
+        }
+
+        // --- Hardware Barcode Gun / Manual Input ---
+        document.getElementById('manualBarcodeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                processManualInput();
+            }
+        });
+
+        function processManualInput() {
+            var input = document.getElementById('manualBarcodeInput');
+            var val = input.value.trim();
+            if (val) {
+                lookupSku(val);
+                input.value = '';
+            }
+        }
+
+        // --- Lookup SKU via Controller ---
+        function lookupSku(sku) {
+            if (!sku) return;
+
+            fetch(`/Scanner/Lookup?sku=${encodeURIComponent(sku)}`)
+                .then(res => {
+                    if (!res.ok) throw new Error("Product not found");
+                    return res.json();
+                })
+                .then(data => {
+                    playBeep(true);
+                    renderProductData(data.product, data.stocks);
+                })
+                .catch(err => {
+                    playBeep(false);
+                    alert(`Product with SKU "${sku}" not found in catalog.`);
+                });
+        }
+
+        function renderProductData(product, stocks) {
+            currentProduct = product;
+
+            document.getElementById('standbyCard').style.display = 'none';
+            document.getElementById('productResultCard').style.display = 'block';
+
+            document.getElementById('resProductName').innerText = product.name;
+            document.getElementById('resCategory').innerText = product.category;
+            document.getElementById('resSku').innerText = "SKU: " + product.sku;
+            document.getElementById('resPrice').innerText = "$" + parseFloat(product.price).toFixed(2);
+
+            var statusBadge = document.getElementById('resStatusBadge');
+            if (product.quantity > 20) {
+                statusBadge.className = "badge bg-success-subtle text-success border border-success-subtle px-2 py-1";
+                statusBadge.innerText = `${product.quantity} in Stock`;
+            } else if (product.quantity > 0) {
+                statusBadge.className = "badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1";
+                statusBadge.innerText = `Low Stock (${product.quantity})`;
+            } else {
+                statusBadge.className = "badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1";
+                statusBadge.innerText = "Out of Stock (0)";
+            }
+
+            // Populate warehouse distribution table
+            var tbody = document.getElementById('resStockTableBody');
+            tbody.innerHTML = '';
+            if (stocks && stocks.length > 0) {
+                stocks.forEach(s => {
+                    var tr = document.createElement('tr');
+                    tr.innerHTML = `<td><i class="fas fa-warehouse text-muted me-1"></i>${s.warehouseName}</td>
+                                    <td class="text-end fw-bold">${s.quantity} units</td>`;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="2" class="text-muted text-center py-2">No stock registered in specific warehouses yet.</td></tr>`;
+            }
+        }
+
+        // --- Execute Quick Action ---
+        function executeQuickAction(type) {
+            if (!currentProduct) {
+                alert("Please scan a product first.");
+                return;
+            }
+
+            var whSelect = type === 'In' ? document.getElementById('inWarehouseSelect') : document.getElementById('outWarehouseSelect');
+            var qtyInput = type === 'In' ? document.getElementById('inQuantity') : document.getElementById('outQuantity');
+            var refInput = type === 'In' ? document.getElementById('inReference') : document.getElementById('outReference');
+
+            var warehouseId = whSelect.value;
+            var quantity = parseInt(qtyInput.value);
+            var reference = refInput.value.trim();
+
+            if (!warehouseId || isNaN(quantity) || quantity <= 0) {
+                alert("Please specify a valid warehouse and quantity.");
+                return;
+            }
+
+            var payload = {
+                Type: type,
+                ProductId: currentProduct.id,
+                WarehouseId: warehouseId,
+                Quantity: quantity,
+                Reference: reference
+            };
+
+            fetch('/Scanner/QuickTransaction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    playBeep(true);
+                    alert(`Success: ${data.message}`);
+                    // Refresh data for this SKU
+                    lookupSku(currentProduct.sku);
+                } else {
+                    playBeep(false);
+                    alert("Error: " + (data.error || "Failed to execute transaction"));
+                }
+            })
+            .catch(err => {
+                playBeep(false);
+                alert("Request error: " + err);
+            });
+        }
+    </script>
+}

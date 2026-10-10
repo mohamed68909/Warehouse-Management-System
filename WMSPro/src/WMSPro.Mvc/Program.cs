@@ -3,6 +3,10 @@ var builder = WebApplication.CreateBuilder(args);
 // ── Services ──────────────────────────────────────────────────────────────────
 builder.Services.AddControllersWithViews();
 
+// ── SignalR & Real-Time Notifier ──────────────────────────────────────────────
+builder.Services.AddSignalR();
+builder.Services.AddScoped<WMSPro.Mvc.Services.IWmsNotifier, WMSPro.Mvc.Services.WmsNotifier>();
+
 // ── HttpClient for API communication ─────────────────────────────────────────
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<WMSPro.Mvc.Handlers.AuthHeaderHandler>();
@@ -40,6 +44,9 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// ── Real-Time SignalR Hub Endpoint ────────────────────────────────────────────
+app.MapHub<WMSPro.Mvc.Hubs.WmsHub>("/hubs/wms");
 
 app.MapControllerRoute(
     name: "default",

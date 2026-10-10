@@ -1,87 +1,282 @@
 @model WMSPro.Mvc.Controllers.DashboardStatsViewModel
 @{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = "Executive Dashboard";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
-    <a href="/Dashboard/Export" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-        <i class="fas fa-download fa-sm text-white-50"></i> Generate Report
-    </a>
+<style>
+    .metric-card {
+        border: none;
+        border-radius: 0.85rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        overflow: hidden;
+    }
+    .metric-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08) !important;
+    }
+    .metric-icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+    }
+    .badge-subtle {
+        font-weight: 600;
+        padding: 0.35rem 0.65rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+    }
+    .badge-subtle-success { background-color: #d1e7dd; color: #0f5132; }
+    .badge-subtle-primary { background-color: #cfe2ff; color: #084298; }
+    .badge-subtle-warning { background-color: #fff3cd; color: #664d03; }
+    .badge-subtle-danger { background-color: #f8d7da; color: #842029; }
+    .badge-subtle-info { background-color: #cff4fc; color: #055160; }
+    .progress-custom {
+        height: 8px;
+        border-radius: 4px;
+        background-color: #eaecf4;
+    }
+    .abc-pill {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.85rem;
+    }
+</style>
+
+<!-- Top Executive Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h1 class="h3 mb-1 text-gray-800 fw-bold">
+            <i class="fas fa-chart-line text-primary me-2"></i>Executive Inventory Intelligence
+        </h1>
+        <p class="text-muted small mb-0">
+            Real-time warehouse diagnostics, capital valuation, turnover velocity & health indicators.
+        </p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill small">
+            <i class="fas fa-circle text-success me-1 fa-beat" style="font-size: 0.55rem;"></i> Live System Connected
+        </span>
+        <a href="/Dashboard/DownloadPdfReport" class="btn btn-sm btn-outline-danger shadow-sm rounded-pill px-3 py-2" target="_blank">
+            <i class="fas fa-file-pdf me-1"></i> Executive PDF
+        </a>
+        <a href="/Dashboard/Export" class="btn btn-sm btn-primary shadow-sm rounded-pill px-3 py-2">
+            <i class="fas fa-file-excel me-1"></i> Export (.csv)
+        </a>
+    </div>
 </div>
 
 @if (TempData["ErrorMessage"] != null)
 {
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        @TempData["ErrorMessage"]
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 }
 
-<!-- KPI Cards Row -->
-<div class="row">
-    <!-- Total Products Card -->
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-primary shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Products</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model?.TotalProducts</div>
+<!-- Critical Operational Alerts (if any) -->
+@if (Model?.CriticalAlerts != null && Model.CriticalAlerts.Any())
+{
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-light border-start border-4 border-warning">
+        <div class="card-body py-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <h6 class="mb-0 fw-bold text-dark">
+                    <i class="fas fa-bell text-warning me-2"></i>Operational Priority Alerts (@Model.CriticalAlerts.Count)
+                </h6>
+                <span class="text-muted text-xs">Action Recommended</span>
+            </div>
+            <div class="row g-2">
+                @foreach (var alert in Model.CriticalAlerts)
+                {
+                    var alertColor = alert.Severity == "danger" ? "danger" : (alert.Severity == "warning" ? "warning" : "info");
+                    <div class="col-md-4">
+                        <div class="p-2 rounded-3 bg-white border border-@alertColor-subtle shadow-sm h-100">
+                            <div class="d-flex align-items-start">
+                                <span class="badge bg-@alertColor text-white me-2 mt-1">@alert.Type</span>
+                                <div>
+                                    <div class="fw-bold text-xs text-dark">@alert.Title</div>
+                                    <div class="text-muted text-xs">@alert.Message</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-auto">
-                        <i class="fas fa-boxes fa-2x text-gray-300"></i>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- PRIMARY HERO KPIS ROW -->
+<div class="row g-3 mb-4">
+    <!-- Total Inventory Valuation -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card metric-card shadow-sm h-100 border-start border-4 border-primary bg-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="text-xs fw-bold text-primary text-uppercase">Total Inventory Valuation</div>
+                        <div class="h3 mb-0 fw-bold text-gray-800 mt-1">
+                            $@Model?.TotalInventoryValue.ToString("N2")
+                        </div>
+                    </div>
+                    <div class="metric-icon-box bg-primary-subtle text-primary">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                </div>
+                <div class="text-xs text-muted d-flex align-items-center justify-content-between mt-2 pt-2 border-top">
+                    <span><i class="fas fa-barcode me-1"></i> @Model?.TotalProducts SKUs in Catalog</span>
+                    <span class="badge badge-subtle badge-subtle-primary">Capital Asset</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Stock Units In Hand -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card metric-card shadow-sm h-100 border-start border-4 border-success bg-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="text-xs fw-bold text-success text-uppercase">Stock Physical Volume</div>
+                        <div class="h3 mb-0 fw-bold text-gray-800 mt-1">
+                            @Model?.TotalStock.ToString("N0") <span class="fs-6 fw-normal text-muted">units</span>
+                        </div>
+                    </div>
+                    <div class="metric-icon-box bg-success-subtle text-success">
+                        <i class="fas fa-boxes-stacked"></i>
+                    </div>
+                </div>
+                <div class="text-xs text-muted d-flex align-items-center justify-content-between mt-2 pt-2 border-top">
+                    <span><i class="fas fa-warehouse me-1"></i> Across @Model?.TotalWarehouses Facilities</span>
+                    <span class="badge badge-subtle badge-subtle-success">Available</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Turnover & DSI -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card metric-card shadow-sm h-100 border-start border-4 border-info bg-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="text-xs fw-bold text-info text-uppercase">Turnover Ratio (Velocity)</div>
+                        <div class="h3 mb-0 fw-bold text-gray-800 mt-1">
+                            @(Model?.InventoryTurnoverRatio > 0 ? $"{Model?.InventoryTurnoverRatio:N2}x" : "N/A")
+                        </div>
+                    </div>
+                    <div class="metric-icon-box bg-info-subtle text-info">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                </div>
+                <div class="text-xs text-muted d-flex align-items-center justify-content-between mt-2 pt-2 border-top">
+                    <span><i class="fas fa-clock me-1"></i> DSI: @(Model?.DaysSalesOfInventory > 0 ? $"{Model?.DaysSalesOfInventory} Days" : "Calculating")</span>
+                    <span class="badge badge-subtle badge-subtle-info">Annualized</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Fulfillment Rate -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card metric-card shadow-sm h-100 border-start border-4 border-warning bg-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="text-xs fw-bold text-warning text-uppercase">Order Fulfillment Rate</div>
+                        <div class="h3 mb-0 fw-bold text-gray-800 mt-1">
+                            @Model?.OrderFulfillmentRate%
+                        </div>
+                    </div>
+                    <div class="metric-icon-box bg-warning-subtle text-warning">
+                        <i class="fas fa-truck-ramp-box"></i>
+                    </div>
+                </div>
+                <div class="text-xs text-muted d-flex align-items-center justify-content-between mt-2 pt-2 border-top">
+                    <span><i class="fas fa-check-circle me-1"></i> @Model?.CompletedOrders / @Model?.TotalOrders Executed</span>
+                    <span class="badge badge-subtle badge-subtle-warning">SLA Metric</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECONDARY METRICS ROW (RISK & CAPACITY) -->
+<div class="row g-3 mb-4">
+    <!-- Dead Stock / Tied Capital -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card metric-card shadow-sm h-100 bg-white">
+            <div class="card-body py-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted text-xs fw-semibold">Dead Stock (60d Inactive)</div>
+                        <div class="h5 mb-0 fw-bold text-danger mt-1">$@Model?.DeadStockValue.ToString("N2")</div>
+                        <small class="text-muted text-xs">@Model?.DeadStockCount items without outflow</small>
+                    </div>
+                    <div class="metric-icon-box bg-danger-subtle text-danger">
+                        <i class="fas fa-hourglass-end"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Total Stock Card -->
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-success shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Stock (Units)</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model?.TotalStock</div>
+    <!-- Low Stock Warning Count -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card metric-card shadow-sm h-100 bg-white">
+            <div class="card-body py-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted text-xs fw-semibold">Low Stock Threshold (&le;20)</div>
+                        <div class="h5 mb-0 fw-bold text-warning mt-1">@Model?.LowStockAlertsCount SKUs</div>
+                        <small class="text-muted text-xs">Immediate purchase required</small>
                     </div>
-                    <div class="col-auto">
-                        <i class="fas fa-cubes fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Low Stock Alerts Card -->
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-warning shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Low Stock Alerts</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model?.LowStockAlertsCount</div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                    <div class="metric-icon-box bg-warning-subtle text-warning">
+                        <i class="fas fa-triangle-exclamation"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Total Warehouses Card -->
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-info shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Active Warehouses</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model?.TotalWarehouses</div>
+    <!-- Sales Order Pipeline -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card metric-card shadow-sm h-100 bg-white">
+            <div class="card-body py-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted text-xs fw-semibold">Sales Orders Volume</div>
+                        <div class="h5 mb-0 fw-bold text-success mt-1">$@Model?.TotalSalesRevenue.ToString("N2")</div>
+                        <small class="text-muted text-xs">Total commercial revenue</small>
                     </div>
-                    <div class="col-auto">
-                        <i class="fas fa-warehouse fa-2x text-gray-300"></i>
+                    <div class="metric-icon-box bg-success-subtle text-success">
+                        <i class="fas fa-money-bill-trend-up"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Purchase Commitments -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card metric-card shadow-sm h-100 bg-white">
+            <div class="card-body py-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted text-xs fw-semibold">Purchase Inflow Orders</div>
+                        <div class="h5 mb-0 fw-bold text-primary mt-1">$@Model?.TotalPurchaseExpense.ToString("N2")</div>
+                        <small class="text-muted text-xs">Supplier expenditure</small>
+                    </div>
+                    <div class="metric-icon-box bg-primary-subtle text-primary">
+                        <i class="fas fa-file-invoice-dollar"></i>
                     </div>
                 </div>
             </div>
@@ -89,68 +284,265 @@
     </div>
 </div>
 
-<div class="row">
-    <!-- Area Chart -->
+<!-- CHARTS & CAPACITY ROW -->
+<div class="row g-4 mb-4">
+    <!-- Stock Movement Trend (Last 6 Months) -->
     <div class="col-xl-8 col-lg-7">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 font-weight-bold text-primary">Stock Movement Overview (Last 6 Months)</h6>
+        <div class="card shadow-sm rounded-4 border-0 h-100 bg-white">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="m-0 fw-bold text-gray-800">
+                        <i class="fas fa-chart-area text-primary me-2"></i>Inflow vs Outflow Velocity Trend
+                    </h6>
+                    <small class="text-muted">6-month monthly comparative distribution (Units In vs Units Out)</small>
+                </div>
+                <div class="d-flex gap-2">
+                    <span class="badge bg-success-subtle text-success px-2 py-1"><i class="fas fa-arrow-down me-1"></i>Stock IN</span>
+                    <span class="badge bg-danger-subtle text-danger px-2 py-1"><i class="fas fa-arrow-up me-1"></i>Stock OUT</span>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="chart-area" style="height: 320px;">
+            <div class="card-body pt-0">
+                <div style="height: 310px;">
                     <canvas id="myAreaChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Recent Activities -->
+    <!-- Warehouse Capacity Utilization Monitor -->
     <div class="col-xl-4 col-lg-5">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 font-weight-bold text-primary">Recent Activities</h6>
+        <div class="card shadow-sm rounded-4 border-0 h-100 bg-white">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-gray-800">
+                    <i class="fas fa-warehouse text-info me-2"></i>Facility Capacity Monitor
+                </h6>
+                <span class="badge badge-subtle badge-subtle-info">@Model?.WarehouseCapacities.Count Hubs</span>
             </div>
-            <div class="card-body" style="height: 360px; overflow-y: auto;">
-                @if (Model?.RecentActivities != null && Model.RecentActivities.Any())
+            <div class="card-body pt-0">
+                @if (Model?.WarehouseCapacities != null && Model.WarehouseCapacities.Any())
                 {
-                    <div class="timeline">
-                        @foreach (var activity in Model.RecentActivities)
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var wh in Model.WarehouseCapacities)
                         {
-                            var badgeClass = activity.Action switch
-                            {
-                                "Stock IN" => "bg-success",
-                                "Stock OUT" => "bg-danger",
-                                "Transfer" => "bg-info",
-                                _ => "bg-secondary"
-                            };
-
-                            var icon = activity.Action switch
-                            {
-                                "Stock IN" => "fa-arrow-down",
-                                "Stock OUT" => "fa-arrow-up",
-                                "Transfer" => "fa-exchange-alt",
-                                _ => "fa-circle"
-                            };
-
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between">
-                                    <strong><i class="fas @icon text-gray-500 mr-2"></i> @activity.ProductName</strong>
-                                    <small class="text-muted">@activity.Time.ToString("MMM dd, HH:mm")</small>
+                            var utilColor = wh.UtilizationPercent >= 85 ? "danger" : (wh.UtilizationPercent >= 60 ? "warning" : "primary");
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <div>
+                                        <span class="fw-bold text-dark text-sm">@wh.Name</span>
+                                        <small class="text-muted d-block text-xs"><i class="fas fa-map-marker-alt me-1"></i>@wh.Location</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="fw-bold text-@utilColor">@wh.UtilizationPercent%</span>
+                                        <small class="text-muted d-block text-xs">@wh.CurrentStock.ToString("N0") / @wh.Capacity.ToString("N0") u</small>
+                                    </div>
                                 </div>
-                                <div class="mt-1">
-                                    <span class="badge @badgeClass">@activity.Action</span> 
-                                    <span>@activity.Quantity units</span>
-                                    <br>
-                                    <small class="text-muted"><i class="fas fa-map-marker-alt"></i> @activity.Warehouse</small>
+                                <div class="progress progress-custom">
+                                    <div class="progress-bar bg-@utilColor" role="progressbar" 
+                                         style="width: @Math.Min(wh.UtilizationPercent, 100)%;" 
+                                         aria-valuenow="@wh.UtilizationPercent" aria-valuemin="0" aria-valuemax="100">
+                                    </div>
                                 </div>
-                                <hr class="mt-2 mb-0">
                             </div>
                         }
                     </div>
                 }
                 else
                 {
-                    <p class="text-muted text-center mt-5">No recent activities.</p>
+                    <p class="text-muted text-center py-4">No warehouses configured.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DEEP INTELLIGENCE: ABC CLASSIFICATION & DEAD STOCK ROW -->
+<div class="row g-4 mb-4">
+    <!-- ABC Inventory Classification (Pareto 80/15/5) -->
+    <div class="col-xl-6">
+        <div class="card shadow-sm rounded-4 border-0 h-100 bg-white">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="m-0 fw-bold text-gray-800">
+                        <i class="fas fa-layer-group text-primary me-2"></i>ABC Inventory Classification (Pareto Matrix)
+                    </h6>
+                    <small class="text-muted">Capital distribution & strategic priority stratification</small>
+                </div>
+                <span class="badge badge-subtle badge-subtle-primary">80/20 Rule</span>
+            </div>
+            <div class="card-body pt-0">
+                @if (Model?.AbcAnalysis != null && Model.AbcAnalysis.Any())
+                {
+                    <div class="row g-3 mb-3">
+                        @foreach (var abc in Model.AbcAnalysis)
+                        {
+                            var pillBg = abc.Category.StartsWith("Class A") ? "bg-danger text-white" :
+                                         (abc.Category.StartsWith("Class B") ? "bg-warning text-dark" : "bg-info text-white");
+                            var barColor = abc.Category.StartsWith("Class A") ? "bg-danger" :
+                                           (abc.Category.StartsWith("Class B") ? "bg-warning" : "bg-info");
+                            <div class="col-12">
+                                <div class="p-3 rounded-3 border bg-light">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="abc-pill @pillBg">
+                                                @(abc.Category.StartsWith("Class A") ? "A" : (abc.Category.StartsWith("Class B") ? "B" : "C"))
+                                            </span>
+                                            <div>
+                                                <span class="fw-bold text-dark">@abc.Category</span>
+                                                <small class="text-muted d-block text-xs">@abc.ProductCount Products in catalog</small>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="fw-bold text-dark">$@abc.TotalValue.ToString("N2")</span>
+                                            <span class="badge badge-subtle badge-subtle-primary d-block mt-1">@abc.ValuePercentage% of Value</span>
+                                        </div>
+                                    </div>
+                                    <div class="progress progress-custom">
+                                        <div class="progress-bar @barColor" style="width: @abc.ValuePercentage%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="p-2 rounded bg-light border text-xs text-muted">
+                        <i class="fas fa-lightbulb text-warning me-1"></i>
+                        <strong>Strategic Tip:</strong> Prioritize daily cycle counting and tight security on <strong>Class A</strong> items, as they tie up the vast majority of your working capital.
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted text-center py-4">No inventory data for ABC classification.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Dead Stock / Capital Optimization Watchlist -->
+    <div class="col-xl-6">
+        <div class="card shadow-sm rounded-4 border-0 h-100 bg-white">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="m-0 fw-bold text-gray-800">
+                        <i class="fas fa-box-archive text-danger me-2"></i>Stagnant / Dead Stock Watchlist
+                    </h6>
+                    <small class="text-muted">Zero outflow activity in 60+ days &mdash; Tied Capital</small>
+                </div>
+                <span class="badge badge-subtle badge-subtle-danger">$@Model?.DeadStockValue.ToString("N2") Frozen</span>
+            </div>
+            <div class="card-body pt-0">
+                @if (Model?.DeadStockItems != null && Model.DeadStockItems.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-sm">
+                            <thead class="table-light text-xs text-muted">
+                                <tr>
+                                    <th>Product</th>
+                                    <th>SKU</th>
+                                    <th>Units</th>
+                                    <th>Frozen Value</th>
+                                    <th>Suggested Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.DeadStockItems)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold text-dark">@item.ProductName</td>
+                                        <td><span class="badge bg-light text-secondary border">@item.SKU</span></td>
+                                        <td>@item.Quantity</td>
+                                        <td class="fw-bold text-danger">$@item.TotalTiedValue.ToString("N2")</td>
+                                        <td>
+                                            <span class="badge badge-subtle badge-subtle-warning">Discount / Bundle</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-check-circle text-success fa-2x mb-2"></i>
+                        <p class="mb-0">Excellent! No dead inventory detected in the last 60 days.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- RECENT OPERATIONS AUDIT STREAM -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm rounded-4 border-0 bg-white">
+            <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="m-0 fw-bold text-gray-800">
+                        <i class="fas fa-list-check text-secondary me-2"></i>Live Audit Log & Recent Operations
+                    </h6>
+                    <small class="text-muted">Traceability of all recent IN, OUT, and Transfer stock transactions</small>
+                </div>
+                <a href="/Transactions/Index" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                    View All Transactions <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="card-body pt-0">
+                @if (Model?.RecentActivities != null && Model.RecentActivities.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-xs text-muted">
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Location / Route</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentActivitiesTbody">
+                                @foreach (var act in Model.RecentActivities)
+                                {
+                                    var badgeStyle = act.Action switch
+                                    {
+                                        "Stock IN" => "badge-subtle-success",
+                                        "Stock OUT" => "badge-subtle-danger",
+                                        "Transfer" => "badge-subtle-info",
+                                        _ => "badge-subtle-primary"
+                                    };
+                                    var icon = act.Action switch
+                                    {
+                                        "Stock IN" => "fa-arrow-down text-success",
+                                        "Stock OUT" => "fa-arrow-up text-danger",
+                                        "Transfer" => "fa-exchange-alt text-info",
+                                        _ => "fa-circle"
+                                    };
+
+                                    <tr>
+                                        <td>
+                                            <span class="badge badge-subtle @badgeStyle">
+                                                <i class="fas @icon me-1"></i>@act.Action
+                                            </span>
+                                        </td>
+                                        <td class="fw-semibold text-dark">@act.ProductName</td>
+                                        <td>
+                                            <span class="fw-bold">@act.Quantity</span> units
+                                        </td>
+                                        <td class="text-muted text-sm">
+                                            <i class="fas fa-map-marker-alt me-1 text-gray-400"></i>@act.Warehouse
+                                        </td>
+                                        <td class="text-muted text-xs">
+                                            <i class="far fa-clock me-1"></i>@act.Time.ToLocalTime().ToString("MMM dd, yyyy HH:mm")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted text-center py-4 mb-0">No transaction logs recorded yet.</p>
                 }
             </div>
         </div>
@@ -161,10 +553,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            // Chart.js Setup
             var ctx = document.getElementById("myAreaChart");
-            if(ctx) {
-                // Get data from Model safely
+            if (ctx) {
                 var labels = @Html.Raw(Json.Serialize(Model?.StockMovementTrend?.Select(t => t.Month) ?? Array.Empty<string>()));
                 var stockIn = @Html.Raw(Json.Serialize(Model?.StockMovementTrend?.Select(t => t.StockIn) ?? Array.Empty<int>()));
                 var stockOut = @Html.Raw(Json.Serialize(Model?.StockMovementTrend?.Select(t => t.StockOut) ?? Array.Empty<int>()));
@@ -175,61 +565,103 @@
                         labels: labels,
                         datasets: [
                             {
-                                label: "Stock IN",
-                                lineTension: 0.3,
-                                backgroundColor: "rgba(28, 200, 138, 0.05)",
-                                borderColor: "rgba(28, 200, 138, 1)",
-                                pointRadius: 3,
-                                pointBackgroundColor: "rgba(28, 200, 138, 1)",
-                                pointBorderColor: "rgba(28, 200, 138, 1)",
-                                pointHoverRadius: 3,
-                                pointHoverBackgroundColor: "rgba(28, 200, 138, 1)",
-                                pointHoverBorderColor: "rgba(28, 200, 138, 1)",
-                                pointHitRadius: 10,
+                                label: "Stock IN (Inflow)",
+                                tension: 0.35,
+                                fill: true,
+                                backgroundColor: "rgba(25, 135, 84, 0.08)",
+                                borderColor: "#198754",
+                                borderWidth: 2.5,
+                                pointRadius: 4,
+                                pointBackgroundColor: "#198754",
+                                pointBorderColor: "#fff",
                                 pointBorderWidth: 2,
+                                pointHoverRadius: 6,
                                 data: stockIn,
                             },
                             {
-                                label: "Stock OUT",
-                                lineTension: 0.3,
-                                backgroundColor: "rgba(231, 74, 59, 0.05)",
-                                borderColor: "rgba(231, 74, 59, 1)",
-                                pointRadius: 3,
-                                pointBackgroundColor: "rgba(231, 74, 59, 1)",
-                                pointBorderColor: "rgba(231, 74, 59, 1)",
-                                pointHoverRadius: 3,
-                                pointHoverBackgroundColor: "rgba(231, 74, 59, 1)",
-                                pointHoverBorderColor: "rgba(231, 74, 59, 1)",
-                                pointHitRadius: 10,
+                                label: "Stock OUT (Outflow)",
+                                tension: 0.35,
+                                fill: true,
+                                backgroundColor: "rgba(220, 53, 69, 0.08)",
+                                borderColor: "#dc3545",
+                                borderWidth: 2.5,
+                                pointRadius: 4,
+                                pointBackgroundColor: "#dc3545",
+                                pointBorderColor: "#fff",
                                 pointBorderWidth: 2,
+                                pointHoverRadius: 6,
                                 data: stockOut,
                             }
                         ],
                     },
                     options: {
+                        responsive: true,
                         maintainAspectRatio: false,
-                        layout: {
-                            padding: { left: 10, right: 25, top: 25, bottom: 0 }
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
                         },
                         scales: {
-                            x: { grid: { display: false, drawBorder: false } },
-                            y: { grid: { color: "rgb(234, 236, 244)", zeroLineColor: "rgb(234, 236, 244)", drawBorder: false, borderDash: [2], zeroLineBorderDash: [2] } }
+                            x: {
+                                grid: { display: false }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: "rgba(0, 0, 0, 0.05)",
+                                    borderDash: [4, 4]
+                                }
+                            }
                         },
                         plugins: {
-                            legend: { display: true },
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15,
+                                    font: { weight: '600', size: 12 }
+                                }
+                            },
                             tooltip: {
-                                backgroundColor: "rgb(255,255,255)",
-                                bodyColor: "#858796",
-                                titleColor: '#6e707e',
-                                borderColor: '#dddfeb',
-                                borderWidth: 1,
-                                padding: 15,
-                                displayColors: false,
-                                intersect: false,
-                                mode: 'index',
-                                caretPadding: 10
+                                backgroundColor: "rgba(33, 37, 41, 0.95)",
+                                titleFont: { size: 13, weight: 'bold' },
+                                bodyFont: { size: 12 },
+                                padding: 12,
+                                cornerRadius: 8
                             }
                         }
+                    }
+                });
+            }
+
+            // Real-Time SignalR Live Update for Dashboard Recent Activities
+            if (typeof connection !== 'undefined') {
+                connection.on("ReceiveTransaction", function (tx) {
+                    var tbody = document.getElementById("recentActivitiesTbody");
+                    if (tbody) {
+                        var tr = document.createElement("tr");
+                        tr.className = "table-success";
+                        tr.style.transition = "background-color 2s ease";
+
+                        var isStockIn = (tx.type || '').toLowerCase() === 'in';
+                        var isStockOut = (tx.type || '').toLowerCase() === 'out';
+                        var badgeStyle = isStockIn ? 'badge-subtle-success' : (isStockOut ? 'badge-subtle-danger' : 'badge-subtle-info');
+                        var icon = isStockIn ? 'fa-arrow-down text-success' : (isStockOut ? 'fa-arrow-up text-danger' : 'fa-exchange-alt text-info');
+                        var actionText = isStockIn ? 'Stock IN' : (isStockOut ? 'Stock OUT' : 'Transfer');
+
+                        tr.innerHTML = `
+                            <td><span class="badge badge-subtle ${badgeStyle}"><i class="fas ${icon} me-1"></i>${actionText}</span></td>
+                            <td class="fw-semibold text-dark">${tx.productName || 'Item'}</td>
+                            <td><span class="fw-bold">${tx.quantity || 0}</span> units</td>
+                            <td class="text-muted text-sm"><i class="fas fa-map-marker-alt me-1 text-gray-400"></i>${tx.warehouse || 'Facility'}</td>
+                            <td class="text-success text-xs fw-bold"><i class="fas fa-circle text-success me-1 fa-beat" style="font-size:0.5rem;"></i>Just now (Live)</td>
+                        `;
+
+                        tbody.insertBefore(tr, tbody.firstChild);
+
+                        setTimeout(function () {
+                            tr.classList.remove("table-success");
+                        }, 3000);
                     }
                 });
             }

@@ -1,0 +1,243 @@
+@model WMSPro.Mvc.Controllers.PickingWaveViewModel
+@{
+    ViewData["Title"] = $"Guided Pick Tour - {Model.WaveNumber}";
+    var currentPendingStop = Model.Items.OrderBy(i => i.SequenceOrder).FirstOrDefault(i => !i.IsPicked);
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a href="/Picking" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                <i class="fas fa-arrow-left me-1"></i> All Waves
+            </a>
+            <h1 class="h3 mb-0 text-gray-800 fw-bold font-monospace">@Model.WaveNumber</h1>
+            @if (Model.IsFullyPicked)
+            {
+                <span class="badge bg-success px-3 py-2 rounded-pill"><i class="fas fa-check-double me-1"></i> Fully Completed</span>
+            }
+            else
+            {
+                <span class="badge bg-primary px-3 py-2 rounded-pill"><i class="fas fa-route me-1"></i> Active S-Shape Route</span>
+            }
+        </div>
+        <p class="text-muted small mb-0">
+            Fulfillment Hub: <strong>@Model.WarehouseName</strong> • Assigned Picker: <strong>@(Model.AssignedPicker ?? "Floor Operator")</strong>
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/Picking/DownloadPdf/@Model.Id" class="btn btn-outline-danger rounded-pill px-3 shadow-sm" target="_blank">
+            <i class="fas fa-file-pdf me-1"></i> Official Pick Sheet PDF
+        </a>
+    </div>
+</div>
+
+<!-- Live Wave Progress Card -->
+<div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <span class="text-uppercase small fw-bold text-muted">Wave Picking Completion</span>
+                <h5 class="fw-bold text-dark mb-0">@Model.PickedItems of @Model.TotalItems Stops Completed</h5>
+            </div>
+            <div class="text-end">
+                <span class="h4 fw-bold text-primary mb-0" id="progressPercentText">@Model.ProgressPercentage%</span>
+            </div>
+        </div>
+        <div class="progress" style="height: 12px; border-radius: 6px;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated @(Model.IsFullyPicked ? "bg-success" : "bg-primary")" 
+                 id="mainProgressBar"
+                 role="progressbar" 
+                 style="width: @Model.ProgressPercentage%;"></div>
+        </div>
+    </div>
+</div>
+
+@if (!Model.IsFullyPicked && currentPendingStop != null)
+{
+    <!-- Hero Card: NEXT STOP IN S-SHAPE TRAVERSAL -->
+    <div class="card border-0 shadow rounded-4 mb-4 bg-gradient text-white border-start border-5 border-success" 
+         style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-lg-8 mb-3 mb-lg-0">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold">
+                            <i class="fas fa-map-marker-alt me-1"></i> STOP #@currentPendingStop.SequenceOrder of @Model.TotalItems
+                        </span>
+                        <span class="badge bg-white text-dark px-3 py-2 rounded-pill font-monospace fw-bold">
+                            <i class="fas fa-boxes me-1 text-primary"></i> Order: @currentPendingStop.OrderNumber
+                        </span>
+                    </div>
+
+                    <div class="text-white-50 small text-uppercase fw-semibold mb-1">Target Storage Bin Coordinates</div>
+                    <h2 class="display-6 fw-bold mb-3 text-white font-monospace">
+                        <i class="fas fa-cube text-warning me-2"></i>@currentPendingStop.LocationCode
+                    </h2>
+
+                    <div class="d-flex flex-wrap gap-2 text-white small mb-3">
+                        <span class="bg-white bg-opacity-10 px-3 py-1 rounded-pill">Zone: <strong>@currentPendingStop.Zone</strong></span>
+                        <span class="bg-white bg-opacity-10 px-3 py-1 rounded-pill">Aisle: <strong>@currentPendingStop.Aisle</strong></span>
+                        <span class="bg-white bg-opacity-10 px-3 py-1 rounded-pill">Rack: <strong>@currentPendingStop.Rack</strong></span>
+                        <span class="bg-white bg-opacity-10 px-3 py-1 rounded-pill">Shelf Level: <strong>@currentPendingStop.ShelfLevel</strong></span>
+                        <span class="bg-white bg-opacity-10 px-3 py-1 rounded-pill">Bin: <strong>@currentPendingStop.BinNumber</strong></span>
+                    </div>
+
+                    <div class="border-top border-white border-opacity-10 pt-3">
+                        <div class="text-white-50 small">Target Product</div>
+                        <h4 class="fw-bold mb-1">@currentPendingStop.ProductName</h4>
+                        <div class="font-monospace text-warning small">SKU: @currentPendingStop.ProductSku</div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 text-center text-lg-end">
+                    <div class="bg-white bg-opacity-10 p-4 rounded-4 backdrop-blur">
+                        <div class="text-white-50 small text-uppercase fw-bold mb-1">Quantity to Pick</div>
+                        <div class="display-3 fw-bold text-warning mb-3">@currentPendingStop.QuantityRequested</div>
+
+                        <form method="post" action="/Picking/ConfirmItem" id="activePickForm">
+                            <input type="hidden" name="waveId" value="@Model.Id" />
+                            <input type="hidden" name="itemId" value="@currentPendingStop.Id" />
+                            <input type="hidden" name="quantityPicked" value="@currentPendingStop.QuantityRequested" />
+                            <button type="submit" class="btn btn-warning btn-lg fw-bold rounded-pill w-100 shadow py-3" onclick="playChimeSound()">
+                                <i class="fas fa-check-circle me-2"></i> Confirm Pick (@currentPendingStop.QuantityRequested Units)
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (Model.IsFullyPicked)
+{
+    <!-- All Complete Celebration Card -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-success bg-opacity-10 text-success text-center py-5">
+        <div class="card-body">
+            <i class="fas fa-check-circle fa-4x mb-3 text-success"></i>
+            <h2 class="fw-bold">Picking Wave Completed Successfully!</h2>
+            <p class="text-muted mb-4">All orders in this batch have been picked according to the S-Shape warehouse route and staged for packing & dispatch.</p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="/Picking" class="btn btn-primary rounded-pill px-4">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Picking Waves
+                </a>
+                <a href="/Picking/DownloadPdf/@Model.Id" class="btn btn-outline-danger rounded-pill px-4" target="_blank">
+                    <i class="fas fa-file-pdf me-1"></i> Download Completed Pick Ticket
+                </a>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Full Optimized S-Shape Route Sequence Table -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-dark">
+            <i class="fas fa-list-ol text-primary me-2"></i>S-Shape Route Stops Sequence
+        </h5>
+        <span class="badge bg-light text-muted border px-3 py-2 rounded-pill small">
+            Ordered to eliminate aisle backtracking
+        </span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" width="100%">
+                <thead class="table-light text-uppercase text-secondary small fw-bold">
+                    <tr>
+                        <th class="ps-4">Stop</th>
+                        <th>Bin Coordinate</th>
+                        <th>Product & SKU</th>
+                        <th>Source Order</th>
+                        <th class="text-end">Qty Req</th>
+                        <th class="text-center">Status</th>
+                        <th class="pe-4 text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var stop in Model.Items.OrderBy(i => i.SequenceOrder))
+                    {
+                        var isCurrent = (currentPendingStop?.Id == stop.Id);
+                        <tr class="@(isCurrent ? "table-primary" : "")">
+                            <td class="ps-4">
+                                <span class="badge @(stop.IsPicked ? "bg-success" : (isCurrent ? "bg-warning text-dark" : "bg-light text-dark border")) rounded-pill px-3 py-2 fw-bold">
+                                    #@stop.SequenceOrder
+                                </span>
+                            </td>
+                            <td>
+                                <div class="fw-bold font-monospace text-dark">@stop.LocationCode</div>
+                                <div class="text-muted small">Zone @stop.Zone • Aisle @stop.Aisle • R@(stop.Rack)-S@(stop.ShelfLevel)</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">@stop.ProductName</div>
+                                <div class="font-monospace text-muted small">SKU: @stop.ProductSku</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border font-monospace">@stop.OrderNumber</span>
+                            </td>
+                            <td class="text-end">
+                                <span class="fw-bold fs-6">@stop.QuantityRequested</span>
+                            </td>
+                            <td class="text-center">
+                                @if (stop.IsPicked)
+                                {
+                                    <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill">
+                                        <i class="fas fa-check-circle me-1"></i> Picked (@stop.QuantityPicked)
+                                    </span>
+                                }
+                                else if (isCurrent)
+                                {
+                                    <span class="badge bg-warning-subtle text-warning px-3 py-2 rounded-pill fa-bounce">
+                                        <i class="fas fa-arrow-right me-1"></i> Next In Route
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-muted border px-3 py-2 rounded-pill">Pending</span>
+                                }
+                            </td>
+                            <td class="pe-4 text-end">
+                                @if (!stop.IsPicked)
+                                {
+                                    <form method="post" action="/Picking/ConfirmItem" class="d-inline">
+                                        <input type="hidden" name="waveId" value="@Model.Id" />
+                                        <input type="hidden" name="itemId" value="@stop.Id" />
+                                        <input type="hidden" name="quantityPicked" value="@stop.QuantityRequested" />
+                                        <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="playChimeSound()">
+                                            <i class="fas fa-check me-1"></i> Pick
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="text-success small fw-bold"><i class="fas fa-check-double me-1"></i> Verified</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function playChimeSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
+                gain.gain.setValueAtTime(0.25, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.3);
+            } catch (e) {
+                console.log('AudioContext not allowed or supported:', e);
+            }
+        }
+    </script>
+}

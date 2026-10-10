@@ -16,6 +16,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<WarehouseStock> WarehouseStocks => Set<WarehouseStock>();
+    public DbSet<StorageLocation> StorageLocations => Set<StorageLocation>();
+    public DbSet<PickingWave> PickingWaves => Set<PickingWave>();
+    public DbSet<PickItem> PickItems => Set<PickItem>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

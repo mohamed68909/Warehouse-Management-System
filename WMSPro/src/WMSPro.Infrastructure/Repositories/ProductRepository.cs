@@ -13,6 +13,9 @@ public class ProductRepository : IProductRepository
     public async Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         await _context.Products.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
+    public async Task<Product?> GetBySkuAsync(string sku, CancellationToken cancellationToken = default) =>
+        await _context.Products.FirstOrDefaultAsync(p => p.SKU == sku.Trim().ToUpper(), cancellationToken);
+
     public async Task<IReadOnlyList<Product>> GetAllAsync(string? search = null, CancellationToken cancellationToken = default)
     {
         var query = _context.Products.AsQueryable();

@@ -33,3 +33,5 @@ public record DeleteProductCommand(Guid Id) : IRequest<Result>;
 public record GetProductsQuery(string? Search = null) : IRequest<Result<IReadOnlyList<ProductDto>>>;
 
 public record GetProductByIdQuery(Guid Id) : IRequest<Result<ProductDto>>;
+
+public record GetProductBySkuQuery(string Sku) : IRequest<Result<ProductDto>>;

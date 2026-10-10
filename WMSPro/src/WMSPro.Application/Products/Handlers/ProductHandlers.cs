@@ -47,6 +47,23 @@ public class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery, Result
     }
 }
 
+// ─── Get By SKU ─────────────────────────────────────────────────────────────
+public class GetProductBySkuHandler : IRequestHandler<GetProductBySkuQuery, Result<ProductDto>>
+{
+    private readonly IProductRepository _repo;
+    public GetProductBySkuHandler(IProductRepository repo) => _repo = repo;
+
+    public async Task<Result<ProductDto>> Handle(
+        GetProductBySkuQuery request, CancellationToken cancellationToken)
+    {
+        var product = await _repo.GetBySkuAsync(request.Sku, cancellationToken);
+        if (product is null)
+            return Result.Failure<ProductDto>(Error.NotFound(nameof(Product), request.Sku));
+
+        return Result.Success(ProductMapper.ToDto(product));
+    }
+}
+
 // ─── Create ─────────────────────────────────────────────────────────────────
 public class CreateProductHandler : IRequestHandler<CreateProductCommand, Result<ProductDto>>
 {

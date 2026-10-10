@@ -1,0 +1,288 @@
+@model WMSPro.Mvc.Controllers.PickingWavesViewModel
+@{
+    ViewData["Title"] = "Smart Wave Picking";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h1 class="h3 mb-1 text-gray-800 fw-bold">
+            <i class="fas fa-route text-primary me-2"></i>Smart Wave Picking & Route Optimization
+        </h1>
+        <p class="text-muted small mb-0">
+            Batch multiple sales orders into an optimized S-Shape snake traversal route through warehouse aisles.
+        </p>
+    </div>
+    <button class="btn btn-primary shadow-sm rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createWaveModal">
+        <i class="fas fa-layer-group me-1"></i> Generate Picking Wave
+    </button>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+        <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- Summary Statistics Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm rounded-4 border-start border-4 border-primary h-100 py-2">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-primary text-uppercase mb-1">Total Waves</div>
+                        <div class="h4 mb-0 fw-bold text-dark">@Model.Waves.Count</div>
+                    </div>
+                    <div class="text-primary bg-primary-subtle p-3 rounded-circle">
+                        <i class="fas fa-stream fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm rounded-4 border-start border-4 border-warning h-100 py-2">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-warning text-uppercase mb-1">In Progress</div>
+                        <div class="h4 mb-0 fw-bold text-dark">@Model.Waves.Count(w => w.Status == "InProgress")</div>
+                    </div>
+                    <div class="text-warning bg-warning-subtle p-3 rounded-circle">
+                        <i class="fas fa-dolly fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm rounded-4 border-start border-4 border-info h-100 py-2">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-info text-uppercase mb-1">Generated / Ready</div>
+                        <div class="h4 mb-0 fw-bold text-dark">@Model.Waves.Count(w => w.Status == "Generated")</div>
+                    </div>
+                    <div class="text-info bg-info-subtle p-3 rounded-circle">
+                        <i class="fas fa-clock fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm rounded-4 border-start border-4 border-success h-100 py-2">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-success text-uppercase mb-1">Completed Waves</div>
+                        <div class="h4 mb-0 fw-bold text-dark">@Model.Waves.Count(w => w.Status == "Completed")</div>
+                    </div>
+                    <div class="text-success bg-success-subtle p-3 rounded-circle">
+                        <i class="fas fa-check-double fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Picking Waves Table Card -->
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold text-dark">
+            <i class="fas fa-clipboard-list text-primary me-2"></i>Active & Past Picking Waves
+        </h5>
+        <span class="badge bg-light text-dark border px-3 py-2 rounded-pill small">
+            @Model.Waves.Count Waves Logged
+        </span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" width="100%">
+                <thead class="table-light text-uppercase text-secondary small fw-bold">
+                    <tr>
+                        <th class="ps-4">Wave No.</th>
+                        <th>Warehouse</th>
+                        <th>Assigned Picker</th>
+                        <th>Pick Progress</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th class="pe-4 text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Waves.Any())
+                    {
+                        @foreach (var wave in Model.Waves)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-primary-subtle text-primary p-2 rounded-3 me-2">
+                                            <i class="fas fa-route"></i>
+                                        </div>
+                                        <div>
+                                            <span class="fw-bold font-monospace text-dark">@wave.WaveNumber</span>
+                                            <div class="text-muted small">@wave.TotalItems Pick Stops</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold">@wave.WarehouseName</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border px-2 py-1">
+                                        <i class="fas fa-user me-1 text-muted"></i>@(wave.AssignedPicker ?? "Floor Operator")
+                                    </span>
+                                </td>
+                                <td style="min-width: 170px;">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>@wave.PickedItems / @wave.TotalItems items</span>
+                                        <span class="fw-bold">@wave.ProgressPercentage%</span>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar @(wave.IsFullyPicked ? "bg-success" : "bg-primary")" 
+                                             role="progressbar" 
+                                             style="width: @wave.ProgressPercentage%;"></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (wave.Status == "Completed")
+                                    {
+                                        <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i>Completed</span>
+                                    }
+                                    else if (wave.Status == "InProgress")
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning px-3 py-2 rounded-pill"><i class="fas fa-spinner fa-spin me-1"></i>In Progress</span>
+                                    }
+                                    else if (wave.Status == "Generated")
+                                    {
+                                        <span class="badge bg-info-subtle text-info px-3 py-2 rounded-pill"><i class="fas fa-clock me-1"></i>Ready to Pick</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary px-3 py-2 rounded-pill">Cancelled</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="text-muted small">@wave.CreatedAt.ToLocalTime().ToString("MMM dd, HH:mm")</span>
+                                </td>
+                                <td class="pe-4 text-end">
+                                    <div class="btn-group">
+                                        <a href="/Picking/Active/@wave.Id" class="btn btn-sm btn-outline-primary" title="Launch Interactive Pick Guide">
+                                            <i class="fas fa-dolly me-1"></i> Guided Tour
+                                        </a>
+                                        <a href="/Picking/DownloadPdf/@wave.Id" class="btn btn-sm btn-outline-danger" title="Download Official Pick Sheet PDF" target="_blank">
+                                            <i class="fas fa-file-pdf"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fas fa-dolly fa-3x mb-3 text-secondary opacity-50"></i>
+                                <h6 class="fw-bold">No Picking Waves Generated Yet</h6>
+                                <p class="small mb-3">Group your pending sales orders into an optimized wave to minimize picker transit time.</p>
+                                <button class="btn btn-sm btn-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#createWaveModal">
+                                    <i class="fas fa-plus me-1"></i> Generate First Wave
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Generate Picking Wave -->
+<div class="modal fade" id="createWaveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+            <form method="post" action="/Picking/Create">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="fas fa-layer-group text-primary me-2"></i>Generate S-Shape Wave Picking Batch
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <div class="alert alert-info border-0 rounded-3 small mb-3">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        The <strong>S-Shape Route Optimizer</strong> will sequence all ordered items by Zone, Aisle, and Rack, allowing the picker to traverse the warehouse in a single continuous snake path without backtracking.
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted">Fulfillment Warehouse</label>
+                            <select class="form-select form-control" name="WarehouseId" required id="waveWarehouseSelect">
+                                <option value="">-- Choose Distribution Center --</option>
+                                @foreach (var w in Model.Warehouses)
+                                {
+                                    <option value="@w.Id">@w.Name (@w.Location)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted">Assigned Floor Picker</label>
+                            <input type="text" class="form-control" name="AssignedPicker" placeholder="e.g. John Doe / Team Alpha" />
+                        </div>
+                    </div>
+
+                    <label class="form-label fw-bold small text-muted mb-2">Select Pending Sales Orders to Bundle in this Wave:</label>
+                    <div class="border rounded-3 p-2 bg-light" style="max-height: 280px; overflow-y: auto;">
+                        @if (Model.PendingSalesOrders.Any())
+                        {
+                            @foreach (var order in Model.PendingSalesOrders)
+                            {
+                                <div class="form-check p-3 bg-white rounded-3 shadow-sm mb-2 border">
+                                    <input class="form-check-input" type="checkbox" name="OrderIds" value="@order.Id" id="order_@order.Id">
+                                    <label class="form-check-label w-100 ms-2" for="order_@order.Id">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <span class="fw-bold font-monospace text-primary">@order.OrderNumber</span>
+                                                <span class="badge bg-light text-dark ms-2">@order.SupplierCustomerName</span>
+                                            </div>
+                                            <div>
+                                                <span class="badge bg-info-subtle text-info me-2">@order.Items.Count Items</span>
+                                                <span class="fw-bold text-dark">$@order.TotalAmount.ToString("N2")</span>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center py-4 text-muted small">
+                                <i class="fas fa-check-circle text-success mb-2 fa-2x"></i>
+                                <p class="mb-0">No pending sales orders requiring fulfillment right now!</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4" @(Model.PendingSalesOrders.Any() ? "" : "disabled")>
+                        <i class="fas fa-magic me-1"></i> Optimize Route & Generate Wave
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

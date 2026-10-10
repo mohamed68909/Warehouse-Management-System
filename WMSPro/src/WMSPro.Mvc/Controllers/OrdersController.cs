@@ -9,10 +9,12 @@ namespace WMSPro.Mvc.Controllers;
 public class OrdersController : Controller
 {
     private readonly HttpClient _httpClient;
+    private readonly WMSPro.Mvc.Services.IWmsNotifier _notifier;
 
-    public OrdersController(IHttpClientFactory httpClientFactory)
+    public OrdersController(IHttpClientFactory httpClientFactory, WMSPro.Mvc.Services.IWmsNotifier notifier)
     {
         _httpClient = httpClientFactory.CreateClient("WmsApi");
+        _notifier = notifier;
     }
 
     public async Task<IActionResult> Index([FromQuery] string? type)
@@ -81,6 +83,7 @@ public class OrdersController : Controller
         
         if (response.IsSuccessStatusCode)
         {
+            await _notifier.NotifyOrderStatusAsync($"Order #{id.ToString().Substring(0, 6).ToUpper()}", status, "Commercial", 0);
             TempData["SuccessMessage"] = "Order status updated successfully!";
         }
         else
@@ -90,6 +93,21 @@ public class OrdersController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> DownloadInvoice(Guid id)
+    {
+        var response = await _httpClient.GetAsync($"api/orders/{id}/invoice-pdf");
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.GetErrorMessageAsync();
+            TempData["ErrorMessage"] = $"Failed to download invoice: {error}";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var pdfBytes = await response.Content.ReadAsByteArrayAsync();
+        return File(pdfBytes, "application/pdf", $"Invoice_{id.ToString().Substring(0, 8)}.pdf");
     }
 }
 

@@ -52,8 +52,18 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Scanner" ? "active" : "")" href="/Scanner/Index">
+                        <i class="fas fa-fw fa-barcode"></i> Barcode Hub
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Warehouses" ? "active" : "")" href="/Warehouses/Index">
                         <i class="fas fa-fw fa-warehouse"></i> Warehouses
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Locations" ? "active" : "")" href="/Locations/Index">
+                        <i class="fas fa-fw fa-th"></i> Warehouse Map (2D)
                     </a>
                 </li>
                 <li class="nav-item">
@@ -71,6 +81,11 @@
                         <i class="fas fa-fw fa-shopping-cart"></i> Orders
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Picking" ? "active" : "")" href="/Picking">
+                        <i class="fas fa-fw fa-route"></i> Smart Picking
+                    </a>
+                </li>
             </ul>
         </nav>
 
@@ -82,6 +97,29 @@
                     <i class="fa fa-bars"></i>
                 </button>
                 <div class="ms-auto d-flex align-items-center">
+                    <!-- Live SignalR Status Indicator -->
+                    <span id="signalrStatusBadge" class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill me-3 small d-none d-md-inline-block">
+                        <i class="fas fa-circle text-success me-1 fa-beat" style="font-size: 0.55rem;"></i> Live SignalR Sync
+                    </span>
+
+                    <!-- Live Notification Bell Dropdown -->
+                    <div class="dropdown me-3">
+                        <button class="btn btn-light rounded-circle position-relative border" type="button" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="width: 2.3rem; height: 2.3rem;">
+                            <i class="fas fa-bell text-secondary"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notifBadge" style="display: none; font-size: 0.65rem;">
+                                0
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 p-2" aria-labelledby="notifDropdown" style="width: 320px; max-height: 380px; overflow-y: auto;" id="notifMenu">
+                            <li class="dropdown-header fw-bold text-dark d-flex justify-content-between align-items-center pb-2">
+                                <span>Real-Time Notifications</span>
+                                <span class="badge bg-primary rounded-pill" id="notifCountLabel">0 New</span>
+                            </li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li id="noNotifItem" class="text-center text-muted small py-3">No new notifications</li>
+                        </ul>
+                    </div>
+
                     <span class="mr-2 d-none d-lg-inline text-gray-600 small fw-bold">Admin User</span>
                     <img class="img-profile rounded-circle ms-2" src="https://ui-avatars.com/api/?name=Admin+User&background=random" style="width: 2rem; height: 2rem;">
                     <a href="/Account/Logout" class="btn btn-sm btn-outline-danger ms-3">Logout</a>
@@ -92,6 +130,9 @@
             <div id="content">
                 @RenderBody()
             </div>
+
+            <!-- Floating Live Toast Container -->
+            <div class="toast-container position-fixed bottom-0 end-0 p-3" id="liveToastContainer" style="z-index: 1090;"></div>
 
             <!-- Footer -->
             <footer class="sticky-footer bg-white py-3 border-top mt-auto">
@@ -106,6 +147,115 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Microsoft SignalR Client Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script>
+        // --- Web Audio Chime Synthesizer ---
+        function playChime(severity) {
+            try {
+                var ctx = new (window.AudioContext || window.webkitAudioContext)();
+                var now = ctx.currentTime;
+                var osc = ctx.createOscillator();
+                var gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                var freq = severity === 'danger' ? 440 : (severity === 'warning' ? 587 : 880);
+                osc.frequency.setValueAtTime(freq, now);
+                osc.frequency.exponentialRampToValueAtTime(freq * 1.5, now + 0.15);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } catch (e) {}
+        }
+
+        // --- SignalR Connection Initialization ---
+        var unreadNotificationsCount = 0;
+        var connection = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/wms")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("ReceiveNotification", function (notif) {
+            unreadNotificationsCount++;
+            var badge = document.getElementById("notifBadge");
+            if (badge) {
+                badge.innerText = unreadNotificationsCount;
+                badge.style.display = "inline-block";
+            }
+            var countLabel = document.getElementById("notifCountLabel");
+            if (countLabel) countLabel.innerText = `${unreadNotificationsCount} New`;
+
+            // Add to Notification Dropdown
+            var menu = document.getElementById("notifMenu");
+            var noItem = document.getElementById("noNotifItem");
+            if (noItem) noItem.style.display = "none";
+
+            var li = document.createElement("li");
+            li.className = "p-2 border-bottom";
+            var bgClass = notif.severity === 'danger' ? 'bg-danger-subtle text-danger' : 
+                         (notif.severity === 'warning' ? 'bg-warning-subtle text-warning' : 'bg-primary-subtle text-primary');
+
+            li.innerHTML = `
+                <div class="d-flex align-items-start gap-2">
+                    <span class="badge ${bgClass} rounded-pill mt-1">${notif.type}</span>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-dark text-xs">${notif.title}</div>
+                        <div class="text-muted text-xs">${notif.message}</div>
+                        <small class="text-muted" style="font-size: 0.65rem;">Just now</small>
+                    </div>
+                </div>`;
+            
+            // Insert after divider
+            if (menu.children.length > 2) {
+                menu.insertBefore(li, menu.children[2]);
+            } else {
+                menu.appendChild(li);
+            }
+
+            // Spawn Floating Toast
+            spawnToast(notif.title, notif.message, notif.severity);
+            playChime(notif.severity);
+        });
+
+        function spawnToast(title, message, severity) {
+            var container = document.getElementById("liveToastContainer");
+            if (!container) return;
+
+            var toastId = "toast_" + Date.now();
+            var borderClass = severity === 'danger' ? 'border-danger' : 
+                             (severity === 'warning' ? 'border-warning' : 'border-success');
+
+            var toastHtml = `
+                <div id="${toastId}" class="toast align-items-center shadow-lg border-start border-4 ${borderClass} rounded-4 mb-2 bg-white" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <strong class="text-dark d-block text-xs"><i class="fas fa-bell text-primary me-1"></i>${title}</strong>
+                            <small class="text-muted">${message}</small>
+                        </div>
+                        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>`;
+
+            container.insertAdjacentHTML("beforeend", toastHtml);
+            var toastEl = document.getElementById(toastId);
+            var bsToast = new bootstrap.Toast(toastEl, { delay: 6000 });
+            bsToast.show();
+        }
+
+        connection.start().then(function () {
+            console.log("SignalR connected successfully.");
+        }).catch(function (err) {
+            console.error("SignalR Connection Error: ", err.toString());
+            var statusBadge = document.getElementById("signalrStatusBadge");
+            if (statusBadge) {
+                statusBadge.className = "badge bg-secondary-subtle text-muted border px-3 py-2 rounded-pill me-3 small";
+                statusBadge.innerHTML = '<i class="fas fa-circle text-muted me-1"></i> Offline Mode';
+            }
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

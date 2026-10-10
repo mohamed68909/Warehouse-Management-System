@@ -9,10 +9,12 @@ namespace WMSPro.Mvc.Controllers;
 public class TransactionsController : Controller
 {
     private readonly HttpClient _httpClient;
+    private readonly WMSPro.Mvc.Services.IWmsNotifier _notifier;
 
-    public TransactionsController(IHttpClientFactory httpClientFactory)
+    public TransactionsController(IHttpClientFactory httpClientFactory, WMSPro.Mvc.Services.IWmsNotifier notifier)
     {
         _httpClient = httpClientFactory.CreateClient("WmsApi");
+        _notifier = notifier;
     }
 
     public async Task<IActionResult> Index([FromQuery] string? search, [FromQuery] string? type)
@@ -106,6 +108,14 @@ public class TransactionsController : Controller
         var response = await _httpClient.PostAsJsonAsync("api/transactions", model);
         if (response.IsSuccessStatusCode)
         {
+            var tx = await response.Content.ReadFromJsonAsync<TransactionViewModel>();
+            if (tx != null)
+            {
+                var wh = tx.Type == "In" ? (tx.DestinationWarehouseName ?? "Facility") :
+                         (tx.Type == "Out" ? (tx.SourceWarehouseName ?? "Facility") : $"{tx.SourceWarehouseName} -> {tx.DestinationWarehouseName}");
+                await _notifier.NotifyTransactionAsync(tx.Type, tx.ProductName, tx.Quantity, wh, tx.Reference);
+            }
+
             TempData["SuccessMessage"] = "Transaction created successfully!";
         }
         else

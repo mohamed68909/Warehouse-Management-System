@@ -92,6 +92,55 @@ public static class DatabaseSeeder
         salesOrder.AddOrderItem(p3.Id, p3.Name, 20, 120m);
         dbContext.Orders.Add(salesOrder);
 
+        // Seed Storage Locations if none exist
+        if (!dbContext.StorageLocations.Any())
+        {
+            var locs = new List<WMSPro.Domain.Entities.StorageLocation>();
+            string[] aisles = { "A01", "A02", "A03" };
+            string[] racks = { "R01", "R02" };
+            int[] levels = { 1, 2, 3 };
+            string[] bins = { "B01", "B02" };
+
+            foreach (var wh in new[] { mainWarehouse, secondaryWarehouse })
+            {
+                foreach (var aisle in aisles)
+                {
+                    var zone = aisle == "A01" ? "Zone A (Fast Moving / Tech)" :
+                               (aisle == "A02" ? "Zone B (Accessories & Peripherals)" : "Zone C (Bulk & Heavy Goods)");
+
+                    foreach (var rack in racks)
+                    {
+                        foreach (var level in levels)
+                        {
+                            foreach (var bin in bins)
+                            {
+                                var code = $"{aisle}-{rack}-L{level}-{bin}";
+                                Guid? assignedProd = null;
+                                int stock = 0;
+
+                                if (wh.Id == mainWarehouse.Id)
+                                {
+                                    if (code == "A01-R01-L1-B01") { assignedProd = p1.Id; stock = 50; }
+                                    else if (code == "A01-R01-L1-B02") { assignedProd = p2.Id; stock = 30; }
+                                }
+                                else if (wh.Id == secondaryWarehouse.Id)
+                                {
+                                    if (code == "A02-R01-L1-B01") { assignedProd = p3.Id; stock = 100; }
+                                    else if (code == "A03-R01-L1-B01") { assignedProd = p4.Id; stock = 45; }
+                                }
+
+                                var locRes = WMSPro.Domain.Entities.StorageLocation.Create(
+                                    wh.Id, code, zone, aisle, rack, level, bin, capacityUnits: 60, currentStock: stock, productId: assignedProd);
+
+                                if (locRes.IsSuccess) locs.Add(locRes.Value);
+                            }
+                        }
+                    }
+                }
+            }
+            dbContext.StorageLocations.AddRange(locs);
+        }
+
         await dbContext.SaveChangesAsync();
     }
 }

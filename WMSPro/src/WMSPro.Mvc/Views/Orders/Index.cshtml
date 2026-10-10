@@ -119,9 +119,14 @@
                             </td>
                             <td>
                                 <!-- Actions -->
-                                <button class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#viewOrderModal-@order.Id">
-                                    <i class="fas fa-eye"></i> View
-                                </button>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#viewOrderModal-@order.Id" title="View Details">
+                                        <i class="fas fa-eye"></i> View
+                                    </button>
+                                    <a href="/Orders/DownloadInvoice/@order.Id" class="btn btn-sm btn-outline-danger" title="Download Official Invoice PDF" target="_blank">
+                                        <i class="fas fa-file-pdf"></i> PDF
+                                    </a>
+                                </div>
                                 
                                 <!-- View Modal -->
                                 <div class="modal fade" id="viewOrderModal-@order.Id" tabindex="-1" aria-hidden="true">
@@ -161,6 +166,9 @@
                                                 </table>
                                             </div>
                                             <div class="modal-footer">
+                                                <a href="/Orders/DownloadInvoice/@order.Id" class="btn btn-outline-danger me-auto" target="_blank">
+                                                    <i class="fas fa-file-pdf me-1"></i> Print / Download Invoice PDF
+                                                </a>
                                                 @if (order.Status == "Pending" || order.Status == "Processing")
                                                 {
                                                     <form method="post" action="/Orders/UpdateStatus" class="d-inline">
